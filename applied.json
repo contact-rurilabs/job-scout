@@ -159,12 +159,5 @@
     "applied": "2026-04-20",
     "status": "rejected",
     "url": ""
-  },
-  {
-    "company": "Test Company",
-    "role": "Test EM Role",
-    "applied": "2026-04-26",
-    "status": "applied",
-    "url": ""
   }
 ]
