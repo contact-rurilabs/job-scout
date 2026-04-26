@@ -58,30 +58,50 @@ async function verifyLinks(text) {
 // Replaces raw URLs in the summary with annotated clickable badges
 
 function annotateLinks(text, linkStatuses) {
-  // Convert markdown bold to <strong>
-  let html = text
-    .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
-    .replace(/\n/g, "<br>");
+  const escapeHtml = (value) =>
+    value
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#39;");
 
-  // Replace each URL with a badged link
-  for (const [url, status] of Object.entries(linkStatuses)) {
-    const escaped = url.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    const regex = new RegExp(escaped, "g");
+  const renderTextChunk = (chunk) =>
+    escapeHtml(chunk)
+      .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+      .replace(/\n/g, "<br>");
 
-    let badge, color, label;
+  const renderLink = (url, status) => {
+    let badge;
+    let color;
+    let label;
+
     if (status === "live") {
-      badge = "✅"; color = "#16a34a"; label = "Confirmed Live";
+      badge = "✅";
+      color = "#16a34a";
+      label = "Confirmed Live";
     } else if (status === "dead") {
-      badge = "❌"; color = "#dc2626"; label = "Closed";
+      badge = "❌";
+      color = "#dc2626";
+      label = "Closed";
     } else {
-      badge = "⚠️"; color = "#d97706"; label = "Browse Manually";
+      badge = "⚠️";
+      color = "#d97706";
+      label = "Browse Manually";
     }
 
-    const link = `<a href="${url}" style="color:${color};font-weight:bold;">${badge} ${label} →</a>`;
-    html = html.replace(regex, link);
-  }
+    return `<a href="${escapeHtml(url)}" style="color:${color};font-weight:bold;">${badge} ${label} →</a>`;
+  };
 
-  return html;
+  const urlRegex = /(https?:\/\/[^\s)"<>]+)/g;
+  const parts = text.split(urlRegex);
+
+  return parts
+    .map((part) => {
+      const status = linkStatuses[part];
+      return status ? renderLink(part, status) : renderTextChunk(part);
+    })
+    .join("");
 }
 
 // ─── BUILD LEGEND + STATS ────────────────────────────────────────────────────
