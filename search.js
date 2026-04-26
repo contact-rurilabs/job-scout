@@ -6,8 +6,6 @@ import nodemailer from "nodemailer";
 const RECIPIENT_EMAIL = "tikigogreen@gmail.com";
 const SENDER_EMAIL = process.env.GMAIL_USER; // set in GitHub Secrets
 const SENDER_PASSWORD = process.env.GMAIL_APP_PASSWORD; // Gmail App Password
-const ANTHROPIC_MODEL =
-  process.env.ANTHROPIC_MODEL || "claude-sonnet-4-5-latest";
 
 // Companies already applied to — Claude will filter these out
 const APPLIED_COMPANIES = [
@@ -67,10 +65,9 @@ For each role you find that meets the criteria, provide:
 Format your final answer as a clean digest. If you find nothing new that meets criteria, say so clearly. Be honest — if a role is borderline on comp or fit, flag it.`;
 
   console.log("🔍 Starting job search...");
-  console.log(`🤖 Using Anthropic model: ${ANTHROPIC_MODEL}`);
 
   const response = await client.messages.create({
-    model: ANTHROPIC_MODEL,
+    model: "claude-haiku-4-5-20251001",
     max_tokens: 4096,
     tools: [{ type: "web_search_20250305", name: "web_search" }],
     messages: [{ role: "user", content: prompt }],
@@ -138,19 +135,10 @@ async function sendEmail(summary) {
 
 async function main() {
   try {
-    if (!process.env.ANTHROPIC_API_KEY) {
-      throw new Error("Missing required secret: ANTHROPIC_API_KEY");
-    }
-    if (!SENDER_EMAIL || !SENDER_PASSWORD) {
-      throw new Error("Missing required Gmail secrets for email delivery");
-    }
-
     const summary = await runJobSearch();
     await sendEmail(summary);
   } catch (err) {
-    console.error("❌ Error:", err?.message || err);
-    if (err?.status) console.error("Status:", err.status);
-    if (err?.error?.message) console.error("API Error:", err.error.message);
+    console.error("❌ Error:", err.message);
     process.exit(1);
   }
 }
