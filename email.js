@@ -26,10 +26,7 @@ function wrapHtml(title, body) {
     <div style="font-family:Arial,sans-serif;max-width:700px;margin:0 auto;padding:20px;">
       <h2 style="color:#1a56db;border-bottom:2px solid #1a56db;padding-bottom:8px;">${title}</h2>
       <div style="margin-top:20px;line-height:1.6;font-size:15px;">
-        ${body
-          .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
-          .replace(/\n/g, "<br>")
-          .replace(/(https?:\/\/[^\s<"]+)/g, '<a href="$1" style="color:#1a56db;">$1</a>')}
+        ${body}
       </div>
       <hr style="margin-top:32px;border:none;border-top:1px solid #eee;">
       <p style="font-size:11px;color:#999;">Job Scout · github.com/contact-rurilabs/job-scout</p>
