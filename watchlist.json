@@ -1,0 +1,12 @@
+[
+  { "company": "Figma",      "url": "https://job-boards.greenhouse.io/figma" },
+  { "company": "Linear",     "url": "https://linear.app/jobs" },
+  { "company": "Vercel",     "url": "https://vercel.com/careers" },
+  { "company": "Stripe",     "url": "https://stripe.com/jobs/search?remote_locations=North+America--Remote" },
+  { "company": "Notion",     "url": "https://www.notion.so/careers" },
+  { "company": "Loom",       "url": "https://job-boards.greenhouse.io/loom" },
+  { "company": "Mercury",    "url": "https://mercury.com/jobs" },
+  { "company": "Retool",     "url": "https://retool.com/careers" },
+  { "company": "Amplitude",  "url": "https://job-boards.greenhouse.io/amplitude" },
+  { "company": "Coda",       "url": "https://job-boards.greenhouse.io/coda" }
+]

@@ -1,0 +1,35 @@
+name: 👁️ Career Page Monitor
+
+on:
+  schedule:
+    - cron: "0 13 * * *"   # 7am MT
+    - cron: "0 19 * * *"   # 1pm MT
+    - cron: "0 1 * * *"    # 7pm MT
+  workflow_dispatch:
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write        # needed to commit cache back to repo
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - run: npm install
+      - run: node monitor.js
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GMAIL_USER: ${{ secrets.GMAIL_USER }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+
+      # Commit updated cache so next run knows what was already seen
+      - name: Commit monitor cache
+        run: |
+          git config user.name "Job Scout Bot"
+          git config user.email "actions@github.com"
+          git add monitor-cache.json || true
+          git diff --staged --quiet || git commit -m "chore: update monitor cache [skip ci]"
+          git push || true

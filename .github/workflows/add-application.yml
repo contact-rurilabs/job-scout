@@ -1,0 +1,59 @@
+name: ✅ Log Application
+
+on:
+  workflow_dispatch:
+    inputs:
+      company:
+        description: "Company name"
+        required: true
+        type: string
+      role:
+        description: "Role title"
+        required: true
+        type: string
+      status:
+        description: "Status"
+        required: true
+        default: "applied"
+        type: choice
+        options:
+          - applied
+          - interviewing
+          - offer
+          - rejected
+          - silent
+      url:
+        description: "Job posting URL (optional)"
+        required: false
+        type: string
+
+jobs:
+  log:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - run: npm install
+      - run: node add-application.js
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GMAIL_USER: ${{ secrets.GMAIL_USER }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          COMPANY: ${{ github.event.inputs.company }}
+          ROLE: ${{ github.event.inputs.role }}
+          STATUS: ${{ github.event.inputs.status }}
+          URL: ${{ github.event.inputs.url }}
+
+      # Commit updated applied.json back to repo
+      - name: Commit updated applied.json
+        run: |
+          git config user.name "Job Scout Bot"
+          git config user.email "actions@github.com"
+          git add applied.json
+          git diff --staged --quiet || git commit -m "track: add ${{ github.event.inputs.company }} — ${{ github.event.inputs.role }}"
+          git push

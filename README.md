@@ -1,100 +1,94 @@
-# Job Scout 🎯
+# Job Scout v2 🎯
 
-Runs 2x/day via GitHub Actions. Searches for new remote Frontend/UI EM roles, emails a digest to you.
+Four automated systems running on GitHub Actions. All share `applied.json` as the single source of truth.
 
-**Cost:** ~$0.05–0.15/day (Anthropic API: $10/1000 web searches + Haiku token costs)
+## What's Running
 
----
+| Script | Schedule | What it does |
+|--------|----------|--------------|
+| `search.js` | 8am + 6pm MT | Searches web for new remote Frontend EM roles, emails digest |
+| `tracker.js` | 9am MT daily | Emails pipeline status table + drafts follow-ups for 14+ day silence |
+| `monitor.js` | 7am + 1pm + 7pm MT | Watches specific company career pages, alerts on new roles |
+| `add-application.js` | Manual trigger | Logs a new application to `applied.json`, commits, sends confirmation |
 
-## Deploy in 10 Minutes
+## Setup (first time)
 
-### Step 1 — Get your Anthropic API Key
+Secrets needed in **GitHub → Settings → Secrets → Actions:**
 
-1. Go to https://console.anthropic.com/settings/keys
-2. Click **Create Key**
-3. Copy it — you'll use it in Step 3
+| Secret | Value |
+|--------|-------|
+| `ANTHROPIC_API_KEY` | From console.anthropic.com/settings/keys |
+| `GMAIL_USER` | tikigogreen@gmail.com |
+| `GMAIL_APP_PASSWORD` | From myaccount.google.com/apppasswords |
 
----
-
-### Step 2 — Get a Gmail App Password
-
-> Gmail blocks regular passwords for SMTP. You need an App Password.
-
-1. Go to https://myaccount.google.com/security
-2. Under "How you sign in to Google" → enable **2-Step Verification** (if not already on)
-3. Go to https://myaccount.google.com/apppasswords
-4. Name it "Job Scout" → click **Create**
-5. Copy the 16-character password shown — you'll use it in Step 3
-
----
-
-### Step 3 — Create the GitHub repo and add Secrets
-
-1. Go to https://github.com/new
-2. Name it `job-scout`, set to **Private**, click **Create repository**
-3. Push this code to it:
-   ```bash
-   cd job-scout
-   git init
-   git add .
-   git commit -m "init"
-   git remote add origin https://github.com/YOUR_USERNAME/job-scout.git
-   git push -u origin main
-   ```
-4. In your repo → **Settings → Secrets and variables → Actions → New repository secret**
-   - Add `ANTHROPIC_API_KEY` → paste your key from Step 1
-   - Add `GMAIL_USER` → your Gmail address (e.g. tikigogreen@gmail.com)
-   - Add `GMAIL_APP_PASSWORD` → paste the 16-char password from Step 2
-
----
-
-### Step 4 — Enable Actions and Test
-
-1. In your repo → click **Actions** tab
-2. You should see **Job Scout** workflow listed
-3. Click it → click **Run workflow** → **Run workflow** (green button)
-4. Watch it run — check your inbox in ~2 minutes
-
-That's it. It now runs automatically at **8am and 6pm Mountain Time** every day.
-
----
-
-## Updating the Applied Companies List
-
-Edit `search.js` and add companies to the `APPLIED_COMPANIES` array:
-
-```js
-const APPLIED_COMPANIES = [
-  "Figma",
-  "Airbnb",
-  "YourNewCompany", // ← add here
-  ...
-];
-```
-
-Commit and push — takes effect on the next run.
-
----
-
-## Change the Schedule
-
-Edit `.github/workflows/job-search.yml`. Times are in UTC.
-
-| MT Time | UTC Cron |
-|---------|----------|
-| 8am MT (summer) | `0 14 * * *` |
-| 6pm MT (summer) | `0 0 * * *` |
-| 8am MT (winter) | `0 15 * * *` |
-| 6pm MT (winter) | `0 1 * * *` |
-
----
-
-## Run Locally (for testing)
+## Upgrade from v1
 
 ```bash
-export ANTHROPIC_API_KEY=your_key_here
-export GMAIL_USER=tikigogreen@gmail.com
-export GMAIL_APP_PASSWORD=your_app_password
-
-node search.js
+# In your existing job-scout repo, replace all files with v2 content
+# then push
+git add .
+git commit -m "upgrade to v2 — full job search system"
+git push
 ```
+
+---
+
+## How to Log a New Application (Feature #1)
+
+Go to **Actions → ✅ Log Application → Run workflow**
+
+Fill in:
+- Company name
+- Role title  
+- Status (applied / interviewing / offer / rejected / silent)
+- URL (optional)
+
+Hit **Run workflow**. It will:
+1. Add entry to `applied.json` and commit it
+2. Exclude that company from future search results automatically
+3. Email you a confirmation
+
+---
+
+## How to Update Application Status
+
+Edit `applied.json` directly in GitHub (pencil icon) and change the `status` field:
+- `applied` — submitted, waiting
+- `interviewing` — active process
+- `offer` — offer received
+- `rejected` — closed/rejected
+- `silent` — manually flagged as dead
+
+---
+
+## How to Watch New Companies (Feature #4)
+
+Edit `watchlist.json` and add an entry:
+```json
+{ "company": "NewCo", "url": "https://newco.com/careers" }
+```
+
+---
+
+## File Structure
+
+```
+job-scout/
+  applied.json          ← source of truth for all applications
+  watchlist.json        ← companies to monitor for new roles
+  monitor-cache.json    ← auto-generated, tracks seen roles (do not edit)
+  search.js             ← job search digest
+  tracker.js            ← silence detector + follow-up drafts
+  monitor.js            ← career page watcher
+  add-application.js    ← log new application via workflow_dispatch
+  email.js              ← shared email utility
+  .github/workflows/
+    job-search.yml
+    tracker.yml
+    monitor.yml
+    add-application.yml
+```
+
+## Cost Estimate
+
+~$0.10–0.25/day total for all four scripts at current usage.

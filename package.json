@@ -1,14 +1,16 @@
 {
   "name": "job-scout",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "type": "module",
-  "description": "Automated job search digest for AJ",
-  "main": "search.js",
+  "description": "Automated job search system for AJ — search, track, monitor, log",
   "scripts": {
-    "start": "node search.js"
+    "search": "node search.js",
+    "tracker": "node tracker.js",
+    "monitor": "node monitor.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.51.0",
+    "node-html-parser": "^6.1.13",
     "nodemailer": "^6.9.16"
   }
 }
