@@ -7,9 +7,109 @@ const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 function loadApplied() {
   const data = JSON.parse(readFileSync("./applied.json", "utf8"));
-  // Deduplicate company names, exclude employed/watchlist entries
   return [...new Set(data.map((a) => a.company))];
 }
+
+// ─── LINK VERIFICATION ───────────────────────────────────────────────────────
+
+async function checkUrl(url) {
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5000);
+
+    const res = await fetch(url, {
+      method: "HEAD",
+      redirect: "manual", // don't follow — we want to detect redirects
+      signal: controller.signal,
+      headers: { "User-Agent": "Mozilla/5.0 (compatible; JobScout/2.0)" },
+    });
+
+    clearTimeout(timeout);
+
+    if (res.status >= 200 && res.status < 300) return "live";
+    if (res.status >= 300 && res.status < 400) return "redirect";
+    if (res.status === 404 || res.status === 410) return "dead";
+    return "redirect"; // 403, 5xx etc — can't confirm, don't discard
+  } catch {
+    return "redirect"; // timeout or network error — keep it, flag as unverified
+  }
+}
+
+async function verifyLinks(text) {
+  const urlRegex = /https?:\/\/[^\s)"<>]+/g;
+  const urls = [...new Set(text.match(urlRegex) || [])];
+
+  if (urls.length === 0) return {};
+
+  console.log(`  🔗 Verifying ${urls.length} link(s)...`);
+
+  const results = await Promise.all(
+    urls.map(async (url) => {
+      const status = await checkUrl(url);
+      console.log(`     ${status === "live" ? "✅" : status === "dead" ? "❌" : "⚠️ "} ${url}`);
+      return [url, status];
+    })
+  );
+
+  return Object.fromEntries(results);
+}
+
+// ─── ANNOTATE EMAIL HTML ─────────────────────────────────────────────────────
+// Replaces raw URLs in the summary with annotated clickable badges
+
+function annotateLinks(text, linkStatuses) {
+  // Convert markdown bold to <strong>
+  let html = text
+    .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+    .replace(/\n/g, "<br>");
+
+  // Replace each URL with a badged link
+  for (const [url, status] of Object.entries(linkStatuses)) {
+    const escaped = url.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const regex = new RegExp(escaped, "g");
+
+    let badge, color, label;
+    if (status === "live") {
+      badge = "✅"; color = "#16a34a"; label = "Confirmed Live";
+    } else if (status === "dead") {
+      badge = "❌"; color = "#dc2626"; label = "Closed";
+    } else {
+      badge = "⚠️"; color = "#d97706"; label = "Browse Manually";
+    }
+
+    const link = `<a href="${url}" style="color:${color};font-weight:bold;">${badge} ${label} →</a>`;
+    html = html.replace(regex, link);
+  }
+
+  return html;
+}
+
+// ─── BUILD LEGEND + STATS ────────────────────────────────────────────────────
+
+function buildStats(linkStatuses) {
+  const counts = { live: 0, redirect: 0, dead: 0 };
+  for (const s of Object.values(linkStatuses)) counts[s]++;
+
+  return `
+    <div style="display:flex;gap:16px;margin-bottom:20px;flex-wrap:wrap;">
+      <span style="background:#f0fff4;border:1px solid #16a34a;padding:4px 10px;border-radius:20px;font-size:12px;color:#16a34a;">
+        ✅ ${counts.live} Confirmed Live
+      </span>
+      <span style="background:#fffbeb;border:1px solid #d97706;padding:4px 10px;border-radius:20px;font-size:12px;color:#d97706;">
+        ⚠️ ${counts.redirect} Browse Manually
+      </span>
+      <span style="background:#fff5f5;border:1px solid #dc2626;padding:4px 10px;border-radius:20px;font-size:12px;color:#dc2626;">
+        ❌ ${counts.dead} Closed
+      </span>
+    </div>
+    <div style="background:#f8f9fa;padding:10px 14px;border-radius:4px;font-size:12px;color:#666;margin-bottom:20px;">
+      ✅ <strong>Confirmed Live</strong> — apply now &nbsp;·&nbsp;
+      ⚠️ <strong>Browse Manually</strong> — link redirected, role may still exist &nbsp;·&nbsp;
+      ❌ <strong>Closed</strong> — skip
+    </div>`;
+}
+
+// ─── MAIN ────────────────────────────────────────────────────────────────────
 
 async function runSearch() {
   const excluded = loadApplied();
@@ -55,20 +155,31 @@ If nothing new meets criteria, say so clearly. Flag borderline roles honestly.`;
     .map((b) => b.text)
     .join("\n");
 
+  // Verify all links found in the response
+  const linkStatuses = await verifyLinks(summary);
+  const hasLinks = Object.keys(linkStatuses).length > 0;
+
   const now = new Date().toLocaleString("en-US", {
     timeZone: "America/Denver",
     dateStyle: "full",
     timeStyle: "short",
   });
 
+  // Count live links for subject line
+  const liveCount = Object.values(linkStatuses).filter((s) => s === "live").length;
+  const subjectTag = liveCount > 0 ? `${liveCount} confirmed live` : "no new roles";
+
   await sendEmail({
-    subject: `🎯 Job Scout — ${now}`,
+    subject: `🎯 Job Scout — ${subjectTag} · ${now}`,
     html: `
       <div style="background:#f0f4ff;border-left:4px solid #1a56db;padding:12px;border-radius:4px;margin-bottom:20px;font-size:13px;color:#444;">
-        Excluding ${excluded.length} companies already applied/rejected · $225K+ base · Remote US/Canada · Frontend/UI EM
+        Excluding ${excluded.length} companies · $225K+ base · Remote US/Canada · Frontend/UI EM
       </div>
-      ${summary}`,
+      ${hasLinks ? buildStats(linkStatuses) : ""}
+      ${hasLinks ? annotateLinks(summary, linkStatuses) : summary}`,
   });
+
+  console.log(`✅ Done. ${liveCount} confirmed live link(s).`);
 }
 
 runSearch().catch((err) => {
