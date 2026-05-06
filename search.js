@@ -19,7 +19,7 @@ async function checkUrl(url) {
 
     const res = await fetch(url, {
       method: "HEAD",
-      redirect: "manual", // don't follow — we want to detect redirects
+      redirect: "manual",
       signal: controller.signal,
       headers: { "User-Agent": "Mozilla/5.0 (compatible; JobScout/2.0)" },
     });
@@ -29,9 +29,9 @@ async function checkUrl(url) {
     if (res.status >= 200 && res.status < 300) return "live";
     if (res.status >= 300 && res.status < 400) return "redirect";
     if (res.status === 404 || res.status === 410) return "dead";
-    return "redirect"; // 403, 5xx etc — can't confirm, don't discard
+    return "redirect";
   } catch {
-    return "redirect"; // timeout or network error — keep it, flag as unverified
+    return "redirect";
   }
 }
 
@@ -55,7 +55,6 @@ async function verifyLinks(text) {
 }
 
 // ─── ANNOTATE EMAIL HTML ─────────────────────────────────────────────────────
-// Replaces raw URLs in the summary with annotated clickable badges
 
 function annotateLinks(text, linkStatuses) {
   const escapeHtml = (value) =>
@@ -72,24 +71,14 @@ function annotateLinks(text, linkStatuses) {
       .replace(/\n/g, "<br>");
 
   const renderLink = (url, status) => {
-    let badge;
-    let color;
-    let label;
-
+    let badge, color, label;
     if (status === "live") {
-      badge = "✅";
-      color = "#16a34a";
-      label = "Confirmed Live";
+      badge = "✅"; color = "#16a34a"; label = "Confirmed Live";
     } else if (status === "dead") {
-      badge = "❌";
-      color = "#dc2626";
-      label = "Closed";
+      badge = "❌"; color = "#dc2626"; label = "Closed";
     } else {
-      badge = "⚠️";
-      color = "#d97706";
-      label = "Browse Manually";
+      badge = "⚠️"; color = "#d97706"; label = "Browse Manually";
     }
-
     return `<a href="${escapeHtml(url)}" style="color:${color};font-weight:bold;">${badge} ${label} →</a>`;
   };
 
@@ -138,8 +127,8 @@ async function runSearch() {
 
 AJ's criteria:
 - Titles: Engineering Manager, Senior Engineering Manager, Director of Engineering (frontend/UI focus)
-- Must be: Remote US or Remote US+Canada
-- Base salary: $225,000+ minimum. If base not listed, total comp $280K+
+- Location: Remote US, Remote US+Canada, OR Remote Canada (AJ is a US Citizen working remotely — eligible for Canadian companies that hire US-based remote workers)
+- Base salary: $225,000+ USD minimum. For Canadian roles, $300,000+ CAD equivalent. If base not listed, total comp $280K+ USD
 - Tech focus: Frontend, UI, React, TypeScript, Design Systems, Developer Experience, Consumer Products
 - NOT a fit: backend-only, infra/DevOps, native mobile (iOS/Android), data engineering, QA-only
 - Start date available: June 2, 2026
@@ -148,10 +137,11 @@ EXCLUDE these companies entirely (already applied or rejected):
 ${excluded.join(", ")}
 
 Your task — run multiple searches:
-1. New remote Frontend EM / Senior EM roles posted in last 48 hours
-2. New remote Director of Engineering (frontend) roles in last 48 hours
-3. Check Greenhouse job boards for fresh frontend EM postings
-4. Any well-funded startups or notable tech companies hiring frontend EM remotely right now
+1. New remote Frontend EM / Senior EM roles posted in last 48 hours (US + Canada)
+2. New remote Director of Engineering (frontend) roles in last 48 hours (US + Canada)
+3. Check Greenhouse and Lever job boards for fresh frontend EM postings open to Canada
+4. Canadian tech companies (Shopify, Hootsuite, Wealthsimple, Lightspeed, GitLab, Clio, Docebo, Faire) hiring frontend EM remotely
+5. Any well-funded US or Canadian startups hiring frontend EM remotely right now
 
 For each qualifying role found, output:
 **[Company] — [Role Title]**
@@ -175,7 +165,6 @@ If nothing new meets criteria, say so clearly. Flag borderline roles honestly.`;
     .map((b) => b.text)
     .join("\n");
 
-  // Verify all links found in the response
   const linkStatuses = await verifyLinks(summary);
   const hasLinks = Object.keys(linkStatuses).length > 0;
 
@@ -185,7 +174,6 @@ If nothing new meets criteria, say so clearly. Flag borderline roles honestly.`;
     timeStyle: "short",
   });
 
-  // Count live links for subject line
   const liveCount = Object.values(linkStatuses).filter((s) => s === "live").length;
   const subjectTag = liveCount > 0 ? `${liveCount} confirmed live` : "no new roles";
 
