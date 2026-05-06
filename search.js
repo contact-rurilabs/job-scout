@@ -137,11 +137,13 @@ EXCLUDE these companies entirely (already applied or rejected):
 ${excluded.join(", ")}
 
 Your task — run multiple searches:
-1. New remote Frontend EM / Senior EM roles posted in last 48 hours (US + Canada)
-2. New remote Director of Engineering (frontend) roles in last 48 hours (US + Canada)
-3. Check Greenhouse and Lever job boards for fresh frontend EM postings open to Canada
-4. Canadian tech companies (Shopify, Hootsuite, Wealthsimple, Lightspeed, GitLab, Clio, Docebo, Faire) hiring frontend EM remotely
-5. Any well-funded US or Canadian startups hiring frontend EM remotely right now
+1. Remote Frontend EM / Senior EM roles posted in the last 2 weeks (US + Canada) — senior roles move slowly, don't limit to 48 hours
+2. Remote Director of Engineering (frontend) roles posted in the last 2 weeks (US + Canada)
+3. Check Greenhouse job boards daily for fresh frontend EM postings — search by recently posted
+4. Check Lever job boards for fresh frontend EM postings open to US or Canada
+5. Canadian tech companies hiring frontend EM remotely: Shopify, Hootsuite, Wealthsimple, Lightspeed, Clio, Docebo, Faire, Koho, Clearco, Benevity
+6. High-growth VC-backed startups (Khosla Ventures, Sequoia, a16z, Bessemer portfolio) hiring frontend EM remotely — these often don't appear on LinkedIn yet
+7. Any notable US or Canadian tech companies with new frontend EM openings this week
 
 For each qualifying role found, output:
 **[Company] — [Role Title]**
